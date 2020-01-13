@@ -50,7 +50,7 @@ func TestMarshal(t *testing.T) {
 			expectedLength := compact(w, expectedContent)
 
 			tv := &testValue{t: tp}
-			e := json.NewEncoder(2)
+			e := json.NewEncoder(0)
 			n, err := e.Encode(w, tv)
 			require.NoError(t, err)
 
