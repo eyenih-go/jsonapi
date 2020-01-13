@@ -24,19 +24,39 @@ func (tv *testValue) Read(p []byte) (n int, err error) {
 	return 0, nil
 }
 
+func compact(b *bytes.Buffer, json string) int {
+	defer b.Reset()
+
+	err := stdJSON.Compact(b, []byte(json))
+	if err != nil {
+		panic(err)
+	}
+
+	return b.Len()
+}
+
 func TestMarshal(t *testing.T) {
-	t.Run("empty values", func(t *testing.T) {
-		emptyValue := "{}"
-		w := &bytes.Buffer{}
-		require.NoError(t, stdJSON.Compact(w, []byte(emptyValue)))
-		contentLength := w.Len()
-		w.Reset()
+	t.Run("zero values", func(t *testing.T) {
+		zeroValues := map[json.Type]string{
+			json.Number:  "0",
+			json.String:  "\"\"",
+			json.Boolean: "false",
+			json.Array:   "[]",
+			json.Object:  "{}",
+		}
 
-		tv := &testValue{t: json.Object}
-		n, err := json.Copy(w, tv)
-		require.NoError(t, err)
+		for tp, expectedContent := range zeroValues {
+			w := &bytes.Buffer{}
+			expectedLength := compact(w, expectedContent)
 
-		assert.Equal(t, int64(contentLength), n)
-		assert.Equal(t, emptyValue, w.String())
+			tv := &testValue{t: tp}
+			e := json.NewEncoder(0)
+			n, err := e.Encode(w, tv)
+			require.NoError(t, err)
+
+			assert.Equal(t, int64(expectedLength), n)
+			assert.Equal(t, expectedContent, w.String())
+		}
+
 	})
 }
