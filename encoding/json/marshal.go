@@ -57,30 +57,16 @@ func NewEncoder(bufferSize int) *Encoder {
 	}
 }
 
-func write(w io.Writer, buf []byte, v string) (written int64, err error) {
+func writeValue(w io.Writer, buf []byte, v string) (written int64, err error) {
+	if len(buf) < len(v) {
+		panic(io.ErrShortBuffer)
+	}
+
 	copy(buf, v)
 
 	n32, ew := w.Write(buf[:len(v)])
 	written += int64(n32)
 	return written, ew
-}
-
-func writeEmpty(w io.Writer, t Type, buf []byte) (written int64, err error) {
-	emptyValue := emptyValues[t]
-
-	if len(buf) < len(emptyValue) {
-		return 0, io.ErrShortBuffer
-	}
-
-	return write(w, buf, emptyValue)
-}
-
-func writeNull(w io.Writer, buf []byte) (written int64, err error) {
-	if len(buf) < len(Null) {
-		return 0, io.ErrShortBuffer
-	}
-
-	return write(w, buf, Null)
 }
 
 // If it can't read anything from the given Value (length of all the written bytes are 0 and the currently read bytes
@@ -97,9 +83,9 @@ func (e *Encoder) Encode(w io.Writer, v Value) (written int64, err error) {
 		if written == 0 && read == 0 {
 			// there was nothing to read.
 			if rErr == nil {
-				return writeEmpty(w, v.Type(), e.buf)
+				return writeValue(w, e.buf, emptyValues[v.Type()])
 			} else if rErr == ErrValueIsNull {
-				return writeNull(w, e.buf)
+				return writeValue(w, e.buf, Null)
 			} else if rErr == io.EOF {
 				return 0, rErr
 			}
