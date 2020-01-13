@@ -35,7 +35,7 @@ func compact(b *bytes.Buffer, json string) int {
 	return b.Len()
 }
 
-func TestMarshal(t *testing.T) {
+func TestEncode(t *testing.T) {
 	t.Run("zero values", func(t *testing.T) {
 		zeroValues := map[json.Type]string{
 			json.Number:  "0",
