@@ -29,6 +29,7 @@ func TestDocument(t *testing.T) {
 	json.Compact(w, []byte(`{
 		"data": null
 	}`))
+	contentLength := w.Len()
 	expected, err := ioutil.ReadAll(w)
 	require.NoError(t, err)
 
@@ -40,6 +41,6 @@ func TestDocument(t *testing.T) {
 	n, err := sd.WriteTo(w)
 
 	require.NoError(t, err)
-	assert.Greater(t, n, int64(0))
+	assert.Equal(t, n, int64(contentLength))
 	assert.Equal(t, string(expected), w.String())
 }
