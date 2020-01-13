@@ -14,6 +14,7 @@ import (
 type testValue struct {
 	content string
 	t       json.Type
+	readErr error
 }
 
 func (tv testValue) Type() json.Type {
@@ -21,7 +22,7 @@ func (tv testValue) Type() json.Type {
 }
 
 func (tv *testValue) Read(p []byte) (n int, err error) {
-	return 0, nil
+	return 0, tv.readErr
 }
 
 func compact(b *bytes.Buffer, json string) int {
@@ -36,16 +37,16 @@ func compact(b *bytes.Buffer, json string) int {
 }
 
 func TestEncode(t *testing.T) {
-	t.Run("zero values", func(t *testing.T) {
-		zeroValues := map[json.Type]string{
-			json.Number:  "0",
-			json.String:  "\"\"",
-			json.Boolean: "false",
-			json.Array:   "[]",
-			json.Object:  "{}",
-		}
+	expectedZeroValues := map[json.Type]string{
+		json.Number:  "0",
+		json.String:  "\"\"",
+		json.Boolean: "false",
+		json.Array:   "[]",
+		json.Object:  "{}",
+	}
 
-		for tp, expectedContent := range zeroValues {
+	t.Run("zero values", func(t *testing.T) {
+		for tp, expectedContent := range expectedZeroValues {
 			w := &bytes.Buffer{}
 			expectedLength := compact(w, expectedContent)
 
@@ -54,9 +55,23 @@ func TestEncode(t *testing.T) {
 			n, err := e.Encode(w, tv)
 			require.NoError(t, err)
 
-			assert.Equal(t, int64(expectedLength), n)
+			assert.Equal(t, expectedLength, n)
 			assert.Equal(t, expectedContent, w.String())
 		}
+	})
 
+	t.Run("null values", func(t *testing.T) {
+		expectedContent := "null"
+		for tp, _ := range expectedZeroValues {
+			w := &bytes.Buffer{}
+
+			tv := &testValue{t: tp, readErr: json.ErrValueIsNull}
+			e := json.NewEncoder(0)
+			n, err := e.Encode(w, tv)
+			require.NoError(t, err)
+
+			assert.Equal(t, 4, n)
+			assert.Equal(t, expectedContent, w.String())
+		}
 	})
 }

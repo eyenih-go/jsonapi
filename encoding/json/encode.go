@@ -57,16 +57,14 @@ func NewEncoder(bufferSize int) *Encoder {
 	}
 }
 
-func writeValue(w io.Writer, buf []byte, v string) (written int64, err error) {
+func writeValue(w io.Writer, buf []byte, v string) (int, error) {
 	if len(buf) < len(v) {
 		panic(io.ErrShortBuffer)
 	}
 
 	copy(buf, v)
 
-	n32, ew := w.Write(buf[:len(v)])
-	written += int64(n32)
-	return written, ew
+	return w.Write(buf[:len(v)])
 }
 
 // If it can't read anything from the given Value (length of all the written bytes are 0 and the currently read bytes
@@ -74,12 +72,13 @@ func writeValue(w io.Writer, buf []byte, v string) (written int64, err error) {
 // If there was no error during the reading, then it's a zero-value and the proper literals will be written to the Writer.
 // If ErrValueIsNull has been returned then "null" literal will be written to the given Writer.
 // If io.EOF is the error then it won't write anything to the Writer.
-func (e *Encoder) Encode(w io.Writer, v Value) (written int64, err error) {
+func (e *Encoder) Encode(w io.Writer, v Value) (written int, err error) {
 	if e.buf == nil || len(e.buf) == 0 {
 		return 0, ErrEmptyBuffer
 	}
 
-	for read, rErr := v.Read(e.buf); nil == rErr; read, rErr = v.Read(e.buf) {
+	for {
+		read, rErr := v.Read(e.buf)
 		if written == 0 && read == 0 {
 			// there was nothing to read.
 			if rErr == nil {
